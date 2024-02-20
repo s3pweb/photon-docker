@@ -5,11 +5,12 @@ services:
       context: .
       dockerfile: Dockerfile
     image: s3pweb/photon-geocoder:latest
-    command: server
+    #network_mode: host
+    command: import fr latest
     volumes:
       - ./data:/photon/photon_data
-    ports:
-      - 2322:2322
+    #ports:
+    #  - 2322:2322
 
 volumes:
   data:

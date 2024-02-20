@@ -1,22 +1,75 @@
 #!/bin/bash
 
+set -eu
 
-# Download elasticsearch index
-if [ ! -d "/photon/photon_data/elasticsearch" ]; then
-    echo "Downloading search index"
+if [ $# -eq 0 ]; then
+    echo "Usage: <command> [options]" >&2
+    echo "where command is:" >&2
 
-    # Let graphhopper know where the traffic is coming from
-    USER_AGENT="docker: tonsnoei/photon-geocoder"
-    # If you want to install a specific region only, enable the line below and disable the current 'wget' row.
-    # Take a look at http://download1.graphhopper.com/public/extracts/by-country-code for your country
-    # wget --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/extracts/by-country-code/nl/photon-db-nl-latest.tar.bz2 | bzip2 -cd | tar x
-    wget --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/photon-db-latest.tar.bz2 | bzip2 -cd | tar x
+    echo "\t- import <country_code> [version]" >&2
+    echo "\t\t- country_code is country code (eg. es, fr, ...) see https://download1.graphhopper.com/public/extracts/by-country-code/" >&2
+    echo "\t\t\tor all to import planet" >&2
+    echo "\t\t- version is optional prebuilt version (defaults to latest)" >&2
+
+    echo "\t- server" >&2
+    echo "\t\tstart photon server" >&2
+    exit 1
+fi
+
+# Import prebuilt photon ElasticSearch database
+if [ "$1" == "import" ]; then
+	shift
+
+	country="$1"
+	shift
+	version="${1:-latest}"
+	shift
+
+	# Download elasticsearch index
+	if [ ! -d "/photon/photon_data/elasticsearch" ]; then
+	    echo "Downloading search index ${country} ${version}"
+
+	    # Let graphhopper know where the traffic is coming from
+	    USER_AGENT="docker: s3pweb/photon-geocoder"
+
+	    url=""
+
+	    if [ "${country}" == "all" ]; then
+		url="http://download1.graphhopper.com/public/photon-db-${version}.tar.bz2"
+		if ! wget --quiet --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/|grep -q "photon-db-${version}.tar.bz2"; then
+			echo "Unable to find ${url}" >&2
+			exit 1
+		fi
+	    else
+		url="http://download1.graphhopper.com/public/extracts/by-country-code/${country}/photon-db-${country}-${version}.tar.bz2"
+		if ! wget --quiet --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/extracts/by-country-code/${country}/|grep -q "photon-db-${country}-${version}.tar.bz2"; then
+			echo "Unable to find ${url}" >&2
+			exit 1
+		fi
+
+	    fi
+
+	    echo "found ${url}"
+
+	    wget --user-agent="$USER_AGENT" -O - ${url} | bzip2 -cd | tar x
+
+	    echo "${url}" > /photon/photon_data/url
+
+	    echo "${country}" > /photon/photon_data/country
+	    echo "${version}" > /photon/photon_data/version
+	fi
 fi
 
 # Start photon if elastic index exists
-if [ -d "/photon/photon_data/elasticsearch" ]; then
-    echo "Start photon"
-    java -jar photon.jar $@
-else
-    echo "Could not start photon, the search index could not be found"
+if [ "$1" == "server" ]; then
+	shift
+
+	if [ -d "/photon/photon_data/elasticsearch" ]; then
+	    echo "Start photon"
+	    java -jar photon.jar $@
+	else
+	    echo "Could not start photon, the search index could not be found" >&2
+	    exit 1
+	fi
 fi
+
