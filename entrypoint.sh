@@ -16,12 +16,15 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Import prebuilt photon ElasticSearch database
-if [ "$1" == "import" ]; then
-	shift
+cmd="$1"
+shift
 
+# Import prebuilt photon ElasticSearch database
+if [ "${cmd}" == "import" ]; then
+	
 	country="$1"
 	shift
+
 	version="${1:-latest}"
 	shift
 
@@ -58,11 +61,11 @@ if [ "$1" == "import" ]; then
 	    echo "${country}" > /photon/photon_data/country
 	    echo "${version}" > /photon/photon_data/version
 	fi
+
 fi
 
 # Start photon if elastic index exists
-if [ "$1" == "server" ]; then
-	shift
+if [ "${cmd}" == "server" ]; then
 
 	if [ -d "/photon/photon_data/elasticsearch" ]; then
 	    echo "Start photon"
@@ -71,5 +74,6 @@ if [ "$1" == "server" ]; then
 	    echo "Could not start photon, the search index could not be found" >&2
 	    exit 1
 	fi
+
 fi
 
