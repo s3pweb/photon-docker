@@ -1,5 +1,10 @@
 #!/bin/bash
 
+trap ctrl_c INT
+ctrl_c () {
+    exit 1
+}
+
 set -eu
 
 if [ $# -eq 0 ]; then
@@ -22,6 +27,10 @@ shift
 # Import prebuilt photon ElasticSearch database
 if [ "${cmd}" == "import" ]; then
 	
+	if [ ! -f /photon/photon_data/url ]; then
+            rm -rf "/photon/photon_data/elasticsearch"
+	fi
+
 	country="$1"
 	shift
 
@@ -38,18 +47,19 @@ if [ "${cmd}" == "import" ]; then
 	    url=""
 
 	    if [ "${country}" == "all" ]; then
-		url="http://download1.graphhopper.com/public/photon-db-${version}.tar.bz2"
 		if ! wget --quiet --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/|grep -q "photon-db-${version}.tar.bz2"; then
 			echo "Unable to find ${url}" >&2
 			exit 1
 		fi
+
+		url="http://download1.graphhopper.com/public/photon-db-${version}.tar.bz2"
 	    else
-		url="http://download1.graphhopper.com/public/extracts/by-country-code/${country}/photon-db-${country}-${version}.tar.bz2"
 		if ! wget --quiet --user-agent="$USER_AGENT" -O - http://download1.graphhopper.com/public/extracts/by-country-code/${country}/|grep -q "photon-db-${country}-${version}.tar.bz2"; then
 			echo "Unable to find ${url}" >&2
 			exit 1
 		fi
 
+		url="http://download1.graphhopper.com/public/extracts/by-country-code/${country}/photon-db-${country}-${version}.tar.bz2"
 	    fi
 
 	    echo "found ${url}"
